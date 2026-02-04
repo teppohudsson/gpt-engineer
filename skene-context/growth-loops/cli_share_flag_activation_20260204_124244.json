@@ -1,0 +1,163 @@
+{
+  "loop_id": "cli_share_flag_activation",
+  "name": "CLI --share Flag Activation",
+  "description": "Enables users to generate a unique, shareable link or identifier for their `gpt-engineer` project after a successful build. This loop aims to foster virality and simplify project sharing among users, laying the groundwork for future features like a 'Remix' landing page.",
+  "requirements": {
+    "files": [
+      {
+        "path": "gpt_engineer/cli.py",
+        "purpose": "Modifies the Command Line Interface (CLI) argument parser to accept a new `--share` flag, allowing users to trigger the sharing workflow.",
+        "required": true,
+        "checks": [
+          "contains_pattern:parser.add_argument(\"--share\"",
+          "contains_pattern:action=\"store_true\""
+        ]
+      },
+      {
+        "path": "gpt_engineer/steps.py",
+        "purpose": "Integrates the share logic into the post-build process, conditional on the `--share` flag being present. This file orchestrates the project execution and will call the sharing service.",
+        "required": true,
+        "checks": [
+          "function_call_exists:share_service.generate_shareable_link",
+          "contains_pattern:if args.share:"
+        ]
+      },
+      {
+        "path": "gpt_engineer/share_service.py",
+        "purpose": "A new module dedicated to encapsulating the logic for packaging project files and interacting with an external service to generate and store shareable links/IDs.",
+        "required": true,
+        "checks": [
+          "function_exists:generate_shareable_link",
+          "function_exists:package_project_for_sharing"
+        ]
+      },
+      {
+        "path": "gpt_engineer/telemetry.py",
+        "purpose": "Dedicated module for tracking telemetry events related to the `--share` flag usage and link generation, ensuring growth metrics can be collected.",
+        "required": true,
+        "checks": [
+          "function_exists:track_cli_share_flag_usage",
+          "function_exists:track_share_link_generation"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "file": "gpt_engineer/cli.py",
+        "name": "main",
+        "required": true,
+        "signature": "def main():"
+      },
+      {
+        "file": "gpt_engineer/steps.py",
+        "name": "execute_project",
+        "required": true,
+        "signature": "def execute_project(project_path: str, prompt: str, verbose: bool, improve_mode: bool, lite_mode: bool) -> None:"
+      },
+      {
+        "file": "gpt_engineer/share_service.py",
+        "name": "package_project_for_sharing",
+        "required": true,
+        "signature": "def package_project_for_sharing(project_path: str) -> str:"
+      },
+      {
+        "file": "gpt_engineer/share_service.py",
+        "name": "generate_shareable_link",
+        "required": true,
+        "signature": "def generate_shareable_link(project_id: str) -> str:"
+      },
+      {
+        "file": "gpt_engineer/telemetry.py",
+        "name": "track_cli_share_flag_usage",
+        "required": true,
+        "signature": "def track_cli_share_flag_usage(prompt_hash: str, build_success: bool, share_link_generated: bool, error_message: Optional[str] = None):"
+      },
+      {
+        "file": "gpt_engineer/telemetry.py",
+        "name": "track_share_link_generation",
+        "required": true,
+        "signature": "def track_share_link_generation(prompt_hash: str, share_link_url: str, build_id: str):"
+      }
+    ],
+    "integrations": [
+      {
+        "type": "cli_flag",
+        "description": "The new `--share` flag must be parsable by the `gpt-engineer` CLI.",
+        "verification": "Run `gpt-engineer --help` and confirm `--share` is listed in the output."
+      },
+      {
+        "type": "external_service_api",
+        "description": "An external API endpoint for storing project data and generating a unique, persistent shareable URL. This service is responsible for providing the actual 'Remix' experience in subsequent loops.",
+        "verification": "Simulate an API call to the external sharing service (e.g., using `curl` or a Python HTTP client) with a dummy project payload and verify a 200 OK response with a valid URL structure. Monitor network traffic during a successful `--share` execution to ensure API interaction occurs."
+      }
+    ],
+    "telemetry": [
+      {
+        "event_name": "cli_share_flag_used",
+        "function": "track_cli_share_flag_usage",
+        "file": "gpt_engineer/telemetry.py",
+        "properties": {
+          "prompt_hash": "string",
+          "build_success": "boolean",
+          "share_link_generated": "boolean",
+          "error_message": "string (optional)"
+        }
+      },
+      {
+        "event_name": "share_link_generated",
+        "function": "track_share_link_generation",
+        "file": "gpt_engineer/telemetry.py",
+        "properties": {
+          "prompt_hash": "string",
+          "share_link_url": "string",
+          "build_id": "string"
+        }
+      }
+    ]
+  },
+  "dependencies": [],
+  "verification_commands": [
+    "gpt-engineer --help",
+    "gpt-engineer 'create a simple Python web server' --share",
+    "Check terminal output for a 'Shareable link generated:' message with a valid URL.",
+    "Verify the presence of 'cli_share_flag_used' and 'share_link_generated' events in telemetry logs/dashboard for the executed command."
+  ],
+  "test_coverage": {
+    "unit_tests": [
+      "test_cli_parser.py::test_share_flag_parsing",
+      "test_share_service.py::test_package_project_for_sharing_creates_archive",
+      "test_share_service.py::test_generate_shareable_link_returns_valid_url",
+      "test_telemetry.py::test_track_cli_share_flag_usage_event_structure",
+      "test_telemetry.py::test_track_share_link_generation_event_structure"
+    ],
+    "integration_tests": [
+      "test_e2e_share_workflow.py::test_gpt_engineer_prompt_with_share_flag_generates_link",
+      "test_e2e_share_workflow.py::test_share_flag_triggers_external_service_api_call",
+      "test_e2e_share_workflow.py::test_share_flag_failure_handling_and_telemetry"
+    ],
+    "manual_tests": [
+      "Execute `gpt-engineer 'build a simple calculator app' --share` and visually confirm a shareable link is output.",
+      "Attempt to open the generated share link in a browser (expecting a valid URL, even if the destination page isn't fully implemented yet).",
+      "Verify that `gpt-engineer --help` clearly shows the `--share` flag with a description.",
+      "Check telemetry dashboard for 'cli_share_flag_used' and 'share_link_generated' events after a successful `--share` execution."
+    ]
+  },
+  "metrics": {
+    "telemetry_events": [
+      "cli_share_flag_used",
+      "share_link_generated"
+    ],
+    "success_criteria": [
+      "Percentage of successful `gpt-engineer` runs where the `--share` flag is used (e.g., >10% of successful builds).",
+      "Success rate of share link generation (e.g., >95% of `--share` invocations result in a valid link).",
+      "Number of unique share links generated per day/week.",
+      "Number of times the generated share links are clicked/accessed (downstream metric, impacting the 'Next' sequence item)."
+    ]
+  },
+  "_metadata": {
+    "source_plan_path": "/Users/teppohudsson/xcode/gpt-engineer/skene-context/growth-plan.md",
+    "saved_at": "2026-02-04T12:42:44.570975",
+    "target": "show",
+    "prompt": "# Implement CLI `--share` flag for gpt-engineer\n\n## Project Context\nYou are an AI coding assistant working on `gpt-engineer`, a tool that generates code based on user prompts. After code generation, the terminal detects \"Build Success.\" For additional project context, refer to the growth plan: @/Users/teppohudsson/xcode/gpt-engineer/skene-context/growth-plan.md\n\n## Immediate Task\nImplement the `--share` flag for the `gpt-engineer` CLI.\n\n## Technical Execution Context\n*   **Exact Logic:** The workflow is `gpt-engineer [prompt]`, code is generated, and the terminal detects \"Build Success.\" The `--share` flag should modify the behavior triggered *after* \"Build Success.\"\n*   **Data Triggers:** `build_success`, `deployment_triggered`, `preview_link_clicked`. While these data triggers are relevant for future features, your current task is strictly to implement the CLI flag and its immediate effect, not to integrate with the full sharing or deployment system.\n\n## Implementation Request\nProvide a step-by-step implementation plan with concrete code examples for adding the `--share` flag to the `gpt-engineer` CLI.\nThis should include:\n1.  Modifying the CLI argument parsing (e.g., using `argparse` in Python or similar CLI frameworks).\n2.  Demonstrating how the presence of the `--share` flag would alter the program's output or actions immediately after \"Build Success\" (e.g., by printing a placeholder shareable link or triggering a specific post-build function)."
+  }
+}

@@ -175,3 +175,102 @@ def collect_and_send_human_review(
     review = human_review_input()
     if review:
         collect_learnings(prompt, model, temperature, config, memory, review)
+
+
+def track_project_deployed(project_id: str, url: str, project_path: str):
+    """
+    Track the project_deployed event when a project is successfully deployed.
+
+    Parameters
+    ----------
+    project_id : str
+        Unique identifier for the deployed project.
+    url : str
+        The shareable URL of the deployed project.
+    project_path : str
+        Path to the project directory.
+
+    Notes
+    -----
+    This function sends a tracking event to RudderStack when a project is deployed.
+    The event is tracked at the exact moment the URL is generated.
+    """
+    import rudderstack.analytics as rudder_analytics
+    from gpt_engineer.applications.cli.learning import get_session
+
+    rudder_analytics.write_key = "2Re4kqwL61GDp7S8ewe6K5dbogG"
+    rudder_analytics.dataPlaneUrl = "https://gptengineerezm.dataplane.rudderstack.com"
+
+    rudder_analytics.track(
+        user_id=get_session(),
+        event="project_deployed",
+        properties={
+            "project_id": project_id,
+            "url": url,
+            "project_path": project_path,
+        },
+    )
+
+
+def track_view_from_share(project_id: str, ip_address: str):
+    """
+    Track the view_from_share event when a unique IP accesses a shared project.
+
+    Parameters
+    ----------
+    project_id : str
+        Unique identifier for the project being viewed.
+    ip_address : str
+        IP address of the viewer (should be unique per viewer).
+
+    Notes
+    -----
+    This function is intended to be called from the hosted project's backend
+    or via a tracking script injected into the deployed project.
+    The architecture allows tracking when a unique IP hits the generated URL.
+    """
+    import rudderstack.analytics as rudder_analytics
+
+    rudder_analytics.write_key = "2Re4kqwL61GDp7S8ewe6K5dbogG"
+    rudder_analytics.dataPlaneUrl = "https://gptengineerezm.dataplane.rudderstack.com"
+
+    rudder_analytics.track(
+        user_id=ip_address,  # Use IP as user_id for anonymous tracking
+        event="view_from_share",
+        properties={
+            "project_id": project_id,
+            "ip_address": ip_address,
+        },
+    )
+
+
+def track_remix_intent(project_id: str, source_url: str):
+    """
+    Track the remix_intent event when a user clicks "Edit this App" on a hosted project.
+
+    Parameters
+    ----------
+    project_id : str
+        Unique identifier for the project being remixed.
+    source_url : str
+        URL of the hosted project where the remix button was clicked.
+
+    Notes
+    -----
+    This function is intended to be called when a user clicks the "Edit this App"
+    button on a hosted project. The architecture allows tracking remix intent.
+    """
+    import rudderstack.analytics as rudder_analytics
+    from gpt_engineer.applications.cli.learning import get_session
+
+    rudder_analytics.write_key = "2Re4kqwL61GDp7S8ewe6K5dbogG"
+    rudder_analytics.dataPlaneUrl = "https://gptengineerezm.dataplane.rudderstack.com"
+
+    rudder_analytics.track(
+        user_id=get_session(),
+        event="remix_intent",
+        properties={
+            "project_id": project_id,
+            "source_url": source_url,
+        },
+    )

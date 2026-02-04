@@ -44,7 +44,11 @@ from langchain_community.cache import SQLiteCache
 from termcolor import colored
 
 from gpt_engineer.applications.cli.cli_agent import CliAgent
-from gpt_engineer.applications.cli.collect import collect_and_send_human_review
+from gpt_engineer.applications.cli.collect import (
+    collect_and_send_human_review,
+    track_project_deployed,
+)
+from gpt_engineer.applications.cli.deploy import deploy_project
 from gpt_engineer.applications.cli.file_selector import FileSelector
 from gpt_engineer.core.ai import AI, ClipboardAI
 from gpt_engineer.core.default.disk_execution_env import DiskExecutionEnv
@@ -378,6 +382,11 @@ def main(
         "--diff_timeout",
         help="Diff regexp timeout. Default: 3. Increase if regexp search timeouts.",
     ),
+    share: bool = typer.Option(
+        False,
+        "--share",
+        help="Deploy the project to a shareable URL after generation or improvement.",
+    ),
 ):
     """
     The main entry point for the CLI tool that generates or improves a project.
@@ -548,6 +557,32 @@ def main(
         stage_uncommitted_to_git(path, files_dict, improve_mode)
 
         files.push(files_dict)
+
+        # Deploy project if --share flag is set
+        if share and files_dict:
+            print(colored("\n🚀 Deploying project to shareable URL...", "light_green"))
+            prompt_str = prompt.text
+            url, project_id = deploy_project(path, files_dict, prompt_str)
+
+            if url and project_id:
+                print(colored(f"\n✅ Project deployed successfully!", "light_green"))
+                print(colored(f"🌐 Shareable URL: {url}", "light_cyan"))
+                print(
+                    colored(
+                        "\n💡 Share this URL with others to view your project.",
+                        "light_green",
+                    )
+                )
+
+                # Track the project_deployed event at the exact moment URL is generated
+                track_project_deployed(project_id, url, str(path))
+            else:
+                print(
+                    colored(
+                        "\n❌ Deployment failed. Please check the error messages above.",
+                        "red",
+                    )
+                )
 
     if ai.token_usage_log.is_openai_model():
         print("Total api cost: $ ", ai.token_usage_log.usage_cost())

@@ -1,0 +1,312 @@
+{
+  "loop_id": "gallery_remix_loop",
+  "name": "Public Project Gallery Remix Loop",
+  "description": "This growth loop encourages new user acquisition and project creation by showcasing user-generated 'Public' projects in a discoverable gallery. Existing users create public projects, which are then remixed by other users, leading to new project instances and increasing overall platform content and engagement. The loop leverages the interactive playground to facilitate quick remixing and attribution.",
+  "requirements": {
+    "files": [
+      {
+        "path": "playground/src/components/project/ProjectSettings.tsx",
+        "purpose": "Modify the project creation/settings UI to default to 'Public' visibility and provide a toggle for 'Private'.",
+        "required": true,
+        "checks": [
+          "function_exists:renderVisibilityToggle",
+          "contains_pattern:defaultChecked={true}",
+          "contains_pattern:onChange={handleVisibilityChange}"
+        ]
+      },
+      {
+        "path": "playground/src/pages/GalleryPage.tsx",
+        "purpose": "Create a new page to display public projects in a gallery format.",
+        "required": true,
+        "checks": [
+          "function_exists:GalleryPage",
+          "contains_pattern:useEffect",
+          "contains_pattern:fetchPublicProjects"
+        ]
+      },
+      {
+        "path": "playground/src/components/gallery/GalleryProjectCard.tsx",
+        "purpose": "Component for individual project cards within the gallery, featuring project details and a 'Remix This Project' button.",
+        "required": true,
+        "checks": [
+          "function_exists:GalleryProjectCard",
+          "contains_pattern:Remix This Project",
+          "contains_pattern:onClick={handleRemix}"
+        ]
+      },
+      {
+        "path": "backend/src/controllers/galleryController.ts",
+        "purpose": "Backend controller to handle requests for fetching public projects for the gallery.",
+        "required": true,
+        "checks": [
+          "function_exists:getPublicProjects",
+          "contains_pattern:ProjectService.getPublicProjects"
+        ]
+      },
+      {
+        "path": "backend/src/routes/galleryRoutes.ts",
+        "purpose": "Define API routes for the Public Project Gallery (e.g., /api/gallery).",
+        "required": true,
+        "checks": [
+          "contains_pattern:/api/gallery",
+          "contains_pattern:galleryController.getPublicProjects"
+        ]
+      },
+      {
+        "path": "backend/src/services/projectService.ts",
+        "purpose": "Extend existing project service to handle project visibility during creation, fetch public projects, and duplicate projects for remixing.",
+        "required": true,
+        "checks": [
+          "function_exists:createProject",
+          "contains_pattern:is_public: boolean",
+          "function_exists:getPublicProjects",
+          "function_exists:remixProject",
+          "contains_pattern:duplicateProjectFiles"
+        ]
+      },
+      {
+        "path": "backend/src/models/ProjectModel.ts",
+        "purpose": "Update the project schema to include 'is_public' and 'original_creator_id' properties.",
+        "required": true,
+        "checks": [
+          "contains_pattern:is_public: { type: Boolean, default: true }",
+          "contains_pattern:original_creator_id: { type: String, required: false }"
+        ]
+      },
+      {
+        "path": "telemetry/src/events.ts",
+        "purpose": "Define new telemetry event names required for tracking this loop.",
+        "required": true,
+        "checks": [
+          "contains_pattern:GALLERY_PAGE_VIEW",
+          "contains_pattern:GALLERY_PROJECT_CLICK"
+        ]
+      },
+      {
+        "path": "telemetry/src/tracker.ts",
+        "purpose": "Implement tracking functions for new and modified telemetry events.",
+        "required": true,
+        "checks": [
+          "function_exists:trackProjectCreated",
+          "contains_pattern:properties: { is_public: boolean }",
+          "function_exists:trackProjectViewed",
+          "contains_pattern:properties: { source: \"gallery\" | \"direct_link\" | \"other\" }",
+          "function_exists:trackProjectRemixed",
+          "contains_pattern:properties: { original_project_id: string, new_project_id: string, source: \"gallery\" | \"direct_link\" | \"other\" }",
+          "function_exists:trackGalleryPageView",
+          "function_exists:trackGalleryProjectClick"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "file": "playground/src/components/project/ProjectSettings.tsx",
+        "name": "handleVisibilityChange",
+        "required": true,
+        "signature": "(event: React.ChangeEvent<HTMLInputElement>) => void"
+      },
+      {
+        "file": "backend/src/services/projectService.ts",
+        "name": "createProject",
+        "required": true,
+        "signature": "(userId: string, projectName: string, isPublic: boolean) => Promise<Project>"
+      },
+      {
+        "file": "backend/src/services/projectService.ts",
+        "name": "getPublicProjects",
+        "required": true,
+        "signature": "() => Promise<Project[]>"
+      },
+      {
+        "file": "backend/src/services/projectService.ts",
+        "name": "remixProject",
+        "required": true,
+        "signature": "(originalProjectId: string, newUserId: string) => Promise<Project>"
+      },
+      {
+        "file": "telemetry/src/tracker.ts",
+        "name": "trackProjectCreated",
+        "required": true,
+        "signature": "(properties: { projectId: string, userId: string, is_public: boolean }) => void"
+      },
+      {
+        "file": "telemetry/src/tracker.ts",
+        "name": "trackProjectViewed",
+        "required": true,
+        "signature": "(properties: { projectId: string, userId: string, source: 'gallery' | 'direct_link' | 'other' }) => void"
+      },
+      {
+        "file": "telemetry/src/tracker.ts",
+        "name": "trackProjectRemixed",
+        "required": true,
+        "signature": "(properties: { original_project_id: string, new_project_id: string, userId: string, source: 'gallery' | 'direct_link' | 'other' }) => void"
+      },
+      {
+        "file": "telemetry/src/tracker.ts",
+        "name": "trackGalleryPageView",
+        "required": true,
+        "signature": "(properties: { userId: string }) => void"
+      },
+      {
+        "file": "telemetry/src/tracker.ts",
+        "name": "trackGalleryProjectClick",
+        "required": true,
+        "signature": "(properties: { projectId: string, userId: string }) => void"
+      }
+    ],
+    "integrations": [
+      {
+        "type": "ui_component",
+        "description": "Project Creation/Settings Form: Default 'Public' visibility with a clear 'Private' toggle.",
+        "verification": [
+          "Ensure new projects default to public.",
+          "Verify the 'Private' toggle functions correctly and requires confirmation."
+        ]
+      },
+      {
+        "type": "ui_component",
+        "description": "Public Project Gallery: A new view (`/gallery`) displaying public projects.",
+        "verification": [
+          "Navigate to `/gallery` and verify public projects are listed.",
+          "Verify projects created as 'Private' do NOT appear in the gallery."
+        ]
+      },
+      {
+        "type": "ui_component",
+        "description": "Remix Project Button: Prominent button on each gallery project card.",
+        "verification": [
+          "Verify the 'Remix This Project' button is present and clickable on public project cards.",
+          "Verify clicking the button initiates the remix flow."
+        ]
+      },
+      {
+        "type": "api_endpoint",
+        "description": "GET /api/gallery: Endpoint to retrieve a list of public projects.",
+        "verification": [
+          "Execute `curl -X GET /api/gallery` and verify a list of public projects is returned.",
+          "Verify only projects with `is_public: true` are returned."
+        ]
+      },
+      {
+        "type": "api_endpoint",
+        "description": "POST /api/projects/{projectId}/remix: Endpoint to duplicate a project for a new user.",
+        "verification": [
+          "Execute `curl -X POST /api/projects/{projectId}/remix` as a different user and verify a new project is created with the original's content.",
+          "Verify the new project has `original_creator_id` set."
+        ]
+      },
+      {
+        "type": "database_schema",
+        "description": "Project model: Added `is_public` (boolean, default true) and `original_creator_id` (string, nullable).",
+        "verification": [
+          "Inspect the Project database schema to confirm `is_public` and `original_creator_id` fields exist.",
+          "Verify default value for `is_public` is true."
+        ]
+      }
+    ],
+    "telemetry": [
+      {
+        "event_name": "project_created",
+        "function": "trackProjectCreated",
+        "file": "telemetry/src/tracker.ts",
+        "properties": [
+          "is_public: boolean"
+        ]
+      },
+      {
+        "event_name": "project_viewed",
+        "function": "trackProjectViewed",
+        "file": "telemetry/src/tracker.ts",
+        "properties": [
+          "source: 'gallery'"
+        ]
+      },
+      {
+        "event_name": "project_remixed",
+        "function": "trackProjectRemixed",
+        "file": "telemetry/src/tracker.ts",
+        "properties": [
+          "original_project_id: string",
+          "new_project_id: string",
+          "source: 'gallery'"
+        ]
+      },
+      {
+        "event_name": "gallery_page_view",
+        "function": "trackGalleryPageView",
+        "file": "telemetry/src/tracker.ts",
+        "properties": []
+      },
+      {
+        "event_name": "gallery_project_click",
+        "function": "trackGalleryProjectClick",
+        "file": "telemetry/src/tracker.ts",
+        "properties": [
+          "project_id: string"
+        ]
+      }
+    ]
+  },
+  "dependencies": [],
+  "verification_commands": [
+    "1. Login as User A.",
+    "2. Navigate to the project creation flow in the Web-based Interactive Playground/IDE.",
+    "3. Create a new project (e.g., 'MyPublicProject'). Ensure the default 'Public' visibility is active. Confirm the project creation.",
+    "4. Verify that the 'project_created' telemetry event is logged with `is_public: true`.",
+    "5. In a new browser tab/window (or Incognito mode to simulate User B not logged in, or User B logged in), navigate to the `/gallery` URL.",
+    "6. Verify that 'MyPublicProject' appears in the Public Project Gallery.",
+    "7. Verify that the 'gallery_page_view' telemetry event is logged.",
+    "8. Click on 'MyPublicProject' in the gallery.",
+    "9. Verify that 'gallery_project_click' and 'project_viewed' (with `source: 'gallery'`) telemetry events are logged.",
+    "10. Login as User B (if not already). Click the 'Remix This Project' button for 'MyPublicProject'.",
+    "11. Verify that the Web-based Interactive Playground/IDE loads with a duplicated project (e.g., 'MyPublicProject (Remixed)') in User B's workspace.",
+    "12. Verify that the 'project_remixed' telemetry event is logged with `source: 'gallery'` and correct `original_project_id` and `new_project_id`.",
+    "13. (Optional) Create a 'Private' project as User A and verify it does NOT appear in the `/gallery`."
+  ],
+  "test_coverage": {
+    "unit_tests": [
+      "Test `projectService.createProject` to verify `is_public` flag is set correctly.",
+      "Test `projectService.getPublicProjects` to ensure only public projects are returned.",
+      "Test `projectService.remixProject` for correct project duplication and attribution.",
+      "Test UI components: `ProjectSettings` for visibility toggle state and behavior.",
+      "Test UI components: `GalleryProjectCard` for rendering and remix button click handler.",
+      "Test telemetry `tracker` functions for correct event structure and property capture."
+    ],
+    "integration_tests": [
+      "End-to-end test: Create a public project -> Verify API exposes it -> Verify Gallery UI displays it -> Remix via API -> Verify new project exists.",
+      "API integration test: `GET /api/gallery` returns valid public projects.",
+      "API integration test: `POST /api/projects/{id}/remix` creates a new project with correct attributes.",
+      "Frontend integration test: Gallery loads and displays project cards, remix button triggers expected backend call.",
+      "Telemetry integration test: Ensure all specified telemetry events are fired at appropriate steps in the loop."
+    ],
+    "manual_tests": [
+      "Follow all steps in `verification_commands`.",
+      "Test different user roles/authentication states for creating, viewing, and remixing projects.",
+      "Test edge cases: no public projects in gallery, large number of public projects, project deletion impacts gallery.",
+      "Test 'Private' project creation and verify it's not visible in the gallery."
+    ]
+  },
+  "metrics": {
+    "telemetry_events": [
+      "project_created",
+      "project_viewed",
+      "project_remixed",
+      "gallery_page_view",
+      "gallery_project_click"
+    ],
+    "success_criteria": [
+      "Increase in 'Public' projects created per day/week.",
+      "Increase in 'gallery_page_view' events.",
+      "Increase in 'gallery_project_click' events.",
+      "Conversion Rate: (Number of gallery-initiated 'project_remixed' events) / (Number of 'gallery_project_click' events).",
+      "Overall increase in 'project_remixed' events (with 'source: gallery' being a significant contributor).",
+      "Increase in new user sign-ups attributed to the gallery (if referrer tracking is implemented)."
+    ]
+  },
+  "_metadata": {
+    "source_plan_path": "/Users/teppohudsson/xcode/gpt-engineer/skene-context/growth-plan.md",
+    "saved_at": "2026-02-04T14:38:37.130717",
+    "target": "show",
+    "prompt": "# Immediate Task: Implement Default Public Project Visibility\n\nYour current task is to modify the project creation flow to default to \"Public\" visibility, with an option to select \"Private.\"\n\n## Relevant Technical Context\n\n### Growth Plan Reference\n\nFor broader context, refer to: @/Users/teppohudsson/xcode/gpt-engineer/skene-context/growth-plan.md\n\n### Exact Logic for this Task\n\n1.  When a user creates a new project in the Web-based Interactive Playground/IDE:\n    *   The default visibility setting will be \"Public (Visible in Gallery).\"\n    *   A clear, but not obstructive, toggle for \"Private\" will be available.\n    *   Opting for \"Private\" will require an extra click and confirmation.\n\n### Data Triggers for this Task\n\n*   `project_created` (ensure it includes `is_public` property: true/false based on the user's selection)\n\n## Action\n\nProvide a step-by-step implementation plan with code examples for the frontend (Web-based Interactive Playground/IDE UI for project creation) and backend (API endpoint for project creation) to achieve the default public visibility and private toggle functionality.\n\nFocus exclusively on implementing Logic point 1 and ensuring the `project_created` data trigger accurately reflects the chosen visibility."
+  }
+}
