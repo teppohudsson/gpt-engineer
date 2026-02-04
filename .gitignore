@@ -74,6 +74,7 @@ docs/tools
 # coding assistants
 .aider*
 .gpteng
+.skene-growth.config
 
 # webapp specific
 webapp/node_modules
